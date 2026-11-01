@@ -74,6 +74,12 @@ targets:
         # which the release script sets) refuses the all-zero placeholder this once held.
         SP_SPARKLE_PUBLIC_KEY: Rssvp+KBKGjTg8ouHevMmSGA0SL95bzCgEcaby+apW4=
         SP_RELEASE_BUILD: NO
+        # Where xcodebuild cloned the Swift packages, for the Sparkle license phase below. By default
+        # that's DerivedData's SourcePackages, beside Build/Products (release.sh and update-test.sh
+        # build so). build.sh and test.sh share one stable directory instead (-clonedSourcePackagesDirPath,
+        # build/SourcePackages), which CI caches, and pass its path here, since Xcode exposes no setting
+        # for it.
+        SP_SOURCE_PACKAGES: $(BUILD_DIR)/../../SourcePackages
       configs:
         Debug:
           ENABLE_HARDENED_RUNTIME: NO
@@ -102,11 +108,11 @@ targets:
           fi
     postBuildScripts:
       # Sparkle's license (with the notices of the code it bundles) into the Acknowledgements the About
-      # panel links, from the very checkout the build resolved (DerivedData's SourcePackages, beside
-      # Build/Products). bundle-resources.sh adds the rest and fails without this one.
+      # panel links, from the very checkout the build resolved (SP_SOURCE_PACKAGES, above).
+      # bundle-resources.sh adds the rest and fails without this one.
       - name: Sparkle license
         inputFiles:
-          - $(BUILD_DIR)/../../SourcePackages/checkouts/Sparkle/LICENSE
+          - $(SP_SOURCE_PACKAGES)/checkouts/Sparkle/LICENSE
         outputFiles:
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Acknowledgements/Sparkle.txt
         script: |

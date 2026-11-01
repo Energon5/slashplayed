@@ -5,9 +5,10 @@
 # derives a cache's version from its paths too), and copies drift. The pins come from the calling
 # workflow's env: XCODE_APP, XCODEGEN_VERSION, XCODEGEN_SHA256, RUSTUP_VERSION, and RUSTUP_SHA256, and
 # what the caches hold from IDEVICE_CACHE_PATHS and ZSIGN_CACHE_PATHS, each listed once there for its
-# restore and its save.
+# restore and its save. The Swift packages' cache (build/SourcePackages, which build.sh and test.sh
+# clone into) is keyed and restored here too.
 name: Companion dependencies
-description: Selects the pinned Xcode and installs XcodeGen, then restores or builds idevice and zsign.
+description: Selects the pinned Xcode, installs XcodeGen, restores the Swift packages, then restores or builds idevice and zsign.
 runs:
   using: composite
   steps:
@@ -26,6 +27,32 @@ runs:
         echo "$XCODEGEN_SHA256  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
         unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
         echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+    # The companion's Swift packages (Sparkle), which build.sh and test.sh clone into build/SourcePackages:
+    # resolving them cold (cloning Sparkle and downloading its binary artifact) was ~20 s of each job before
+    # xcodebuild compiled anything, against ~1 s with the checkout already there. Keyed on what decides the
+    # checkout, project.yml's packages block (its exact pins; comments dropped, so rewording one doesn't
+    # miss), and the runner and Xcode, like the caches below. Not on Package.resolved: xcodegen makes the
+    # project fresh each run, so there's none until the resolve this saves.
+    - name: Key Swift packages
+      id: spm-key
+      shell: bash
+      run: |
+        pins=$(awk '/^packages:/ { f = 1; next } f && /^[^[:space:]#]/ { exit } f' apps/companion/project.yml |
+          grep -v '^[[:space:]]*#')
+        [ -n "$pins" ] || { echo "no packages block in apps/companion/project.yml" >&2; exit 1; }
+        echo "hash=$(printf %s "$pins" | shasum -a 256 | cut -c1-64)" >> "$GITHUB_OUTPUT"
+
+    # actions/cache rather than restore and save: the checkout only exists once build.sh or test.sh has run
+    # in the calling job, so it's saved at the job's end, after a success (a failure loses seconds, not the
+    # idevice build's minutes). Both jobs save under the same key; the slower save is refused with a
+    # warning. Safe with untrusted PRs and kept out of releases for the reasons under Restore idevice, and
+    # xcodebuild checks the checkout against the pin and the binary artifact against its checksum anyway.
+    - name: Restore Swift packages
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: build/SourcePackages
+        key: spm-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_APP }}-${{ steps.spm-key.outputs.hash }}
 
     # idevice and zsign from source are about five minutes of a job, and their outputs change only when
     # what builds them does, so each is cached on exactly that: the runner, the Xcode (clang, lipo, strip,

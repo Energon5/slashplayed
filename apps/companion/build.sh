@@ -10,8 +10,14 @@ OUT=$ROOT/build/companion
 APP="$OUT/Slashplayed Companion.app"
 ./idevice-config.sh
 xcodegen generate --quiet
+# The Swift packages (Sparkle) are cloned into build/SourcePackages rather than DerivedData, shared with
+# test.sh: a stable path CI caches (.github/actions/companion-deps, Restore Swift packages), so neither
+# job clones Sparkle and downloads its binary artifact before compiling. SP_SOURCE_PACKAGES points the
+# Sparkle license phase (project.yml) at it.
+SPM=$ROOT/build/SourcePackages
 xcodebuild -project SPCompanion.xcodeproj -scheme SPCompanion -configuration Release \
-  -derivedDataPath "$OUT/DerivedData" -quiet build
+  -derivedDataPath "$OUT/DerivedData" -clonedSourcePackagesDirPath "$SPM" -quiet build \
+  SP_SOURCE_PACKAGES="$SPM"
 rm -rf "$APP"
 cp -R "$OUT/DerivedData/Build/Products/Release/Slashplayed Companion.app" "$OUT/"
 ./bundle-resources.sh "$APP"
