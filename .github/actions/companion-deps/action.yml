@@ -29,11 +29,13 @@ runs:
         echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
 
     # The companion's Swift packages (Sparkle), which build.sh and test.sh clone into build/SourcePackages:
-    # resolving them cold (cloning Sparkle and downloading its binary artifact) was ~20 s of each job before
-    # xcodebuild compiled anything, against ~1 s with the checkout already there. Keyed on what decides the
-    # checkout, project.yml's packages block (its exact pins; comments dropped, so rewording one doesn't
-    # miss), and the runner and Xcode, like the caches below. Not on Package.resolved: xcodegen makes the
-    # project fresh each run, so there's none until the resolve this saves.
+    # resolving them cold (cloning Sparkle and downloading its binary artifact) is a few seconds of every
+    # xcodebuild with a fresh DerivedData (~3 s on the runner), against ~1 s with the checkout already
+    # there. (Most of the ~20 s before a job's first xcodebuild prints anything is something else, paid
+    # once per runner.) Keyed on what decides the checkout, project.yml's packages block (its exact pins;
+    # comments dropped, so rewording one doesn't miss), and the runner and Xcode, like the caches below.
+    # Not on Package.resolved: xcodegen makes the project fresh each run, so there's none until the
+    # resolve this saves.
     - name: Key Swift packages
       id: spm-key
       shell: bash
