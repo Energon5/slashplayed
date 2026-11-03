@@ -137,6 +137,13 @@ runs, before the client is loaded:
    page of `__TEXT`, about 2,900 pages in 0.1 s), and detaches. The launcher loads the client once it
    sees `P_TRACED`.
 
+One more request, **profiles**, installs provisioning profiles through misagent over the same tunnel
+(`com.apple.misagent.shim.remote`) and lists the device's: iOS opens an app on any valid installed profile
+for its App ID, not only the one it embeds, so a renewed profile keeps the app opening with no re-sign
+and no reinstall. The launcher's `sp_jit_profiles` hands over only the app's and its helper's own
+profiles; the profiles drill (`SP_PROFILES_DRILL`, `run.sh`) tries it from files in
+`Documents/spprofiles/`.
+
 A launch with the image mounted takes about 1.5 s from start to attached. On iOS the launcher shows
 the scene first (see [iPad](#ipad)), and if the helper can't do its part, the launcher puts the reason
 on the scene and doesn't load the client: no pairing record, no image to mount. LocalDevVPN off isn't
