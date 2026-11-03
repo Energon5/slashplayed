@@ -453,6 +453,7 @@ What the device holds for it, all in the app's container:
 | What | Where | Written by | Gone when |
 |---|---|---|---|
 | The signing identity | the app's keychain, service "Slashplayed signing identity" (this device only, never synced) | the launcher, from the pushed `Library/spidentity.p12` and `.pass` (deleted at once) | Forget Signing Identity on the device, or the companion's forget marker (the setting turned off, Stop Using the Slashplayed Certificate) |
+| The Apple token | the app's keychain, service "Slashplayed Apple token" (this device only, never synced) | the launcher (`spapple.m`), from the pushed `Library/spappletoken.json` (deleted at once) | a new one is pushed |
 | What it holds | `Library/spidentity.txt` (`present <day>`, `expired`, `none`, `forgotten`) | the launcher, every start | rewritten every start |
 | B's profile | installed device-wide, and a copy in `Library/spprofile.mobileprovision` | the companion | it expires (an expired one lists nothing) |
 | A newer build's slice | `Library/spslice/<flavor>.arm64`, `spbuild-<flavor>` | the patch check | the bundled image catches up |
@@ -710,6 +711,11 @@ One run, `slashplayed-companion [install]`, which is also the weekly re-sign on 
    - The developer disk image (below).
    - The signing identity as `Library/spidentity.p12` and `.pass`, every run. The launcher imports it,
      and the device installs games with it.
+   - The Apple token as `Library/spappletoken.json`, every run: the `xcode.auth` app token from this
+     sign-in, its adsid, and the anisette server and machine identity it was made on
+     (`account::device_token`). The launcher imports it into its keychain (`spapple.m`) and gets the app's
+     renewed profiles from Apple with it. Not with `--server-client-info`, whose client identity the
+     device doesn't claim.
 
 **The signing key** stays between runs in the OS credential store, never a file: the macOS Keychain,
 Windows Credential Manager, or the Secret Service on Linux (`src/keystore.rs`). There's one item per
