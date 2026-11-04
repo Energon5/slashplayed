@@ -448,11 +448,21 @@ NSArray<NSData *> *sp_profile_certificates(NSData *profile, NSDate *now) {
     return certs;
 }
 
+NSArray<NSString *> *sp_profile_copies(void) {
+    NSString *dir = home(@"Library/spprofiles");
+    NSMutableArray *paths = [NSMutableArray array];
+    for (NSString *name in [NSFileManager.defaultManager contentsOfDirectoryAtPath:dir error:nil])
+        if ([name.pathExtension isEqual:@"mobileprovision"]) [paths addObject:[dir stringByAppendingPathComponent:name]];
+    return paths;
+}
+
 NSArray<NSData *> *sp_listed_certificates(void) {
     NSMutableArray<NSData *> *listed = [NSMutableArray array];
     NSString *app = app_dir();
-    for (NSString *path in @[app ? [app stringByAppendingPathComponent:@"embedded.mobileprovision"] : @"",
-                             home(@"Library/spprofile.mobileprovision")])
+    NSMutableArray *paths = [NSMutableArray arrayWithArray:@[app ? [app stringByAppendingPathComponent:@"embedded.mobileprovision"] : @"",
+                                                             home(@"Library/spprofile.mobileprovision")]];
+    [paths addObjectsFromArray:sp_profile_copies()];
+    for (NSString *path in paths)
         if (path.length) [listed addObjectsFromArray:sp_profile_certificates([NSData dataWithContentsOfFile:path], [NSDate date])];
     return listed;
 }
